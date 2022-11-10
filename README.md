@@ -38,7 +38,6 @@
 	-on pourrait même envisager d'avoir un script qui pull automatiquement quand on lance le launcher
 	-Design du panneau de contrôle du volume
 
-
 ## Bug à fix/préventions:
 	-Mettre les cadres de preview de jeu gris quand nbgames < 3
 	-Tester pour choisir le bon exe si il y en a plusieurs dans les dossiers du jeu
@@ -54,3 +53,6 @@
 	#Affichage secondaire des jeux en grille
 	#Support pour afficher la description des jeux
 	#Contrôle du volume système depuis le launcher
+	#Hold pour faire défiler
+	#Affichage des contrôles du jeu
+	#Affichage d'une vidéo demo

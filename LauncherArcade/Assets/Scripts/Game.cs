@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Video;
 using System.IO;
 using System.Text;
 
@@ -10,7 +11,9 @@ public class Game
     public Sprite logo = null;
     public string name;
     public string description = null;
+    public string videoUrl;
     const float PixelsPerUnit = 100.0f;
+    public ControlsInfo controlsInfo;
 
     public Game(string pathToGameDir, string pathToExe, string pathToGameMeta, string name)
     {
@@ -21,6 +24,8 @@ public class Game
 
         loadLogo();
         loadDescription();
+        loadControls();
+        loadVideo();
     }
 
     void loadDescription()
@@ -45,6 +50,36 @@ public class Game
         }
 
         description = strBuilder.ToString();
+    }
+
+    void loadControls()
+    {
+        string pathToDescription = pathToGameMeta + "/controls.txt";
+
+        var strBuilder = new StringBuilder();
+        if (File.Exists(pathToDescription))
+        {
+            StreamReader reader = new StreamReader(pathToDescription);
+
+            while (!reader.EndOfStream)
+            {
+                strBuilder.Append(reader.ReadLine() + "\n");
+            }
+
+            reader.Close();
+        }
+        else
+        {
+            strBuilder.Append("Un jeu de 7Fault");
+        }
+
+        controlsInfo = new ControlsInfo(strBuilder.ToString());
+    }
+
+    void loadVideo()
+    {
+        videoUrl = pathToGameMeta + "/demo.mp4";
+        if (!File.Exists(videoUrl)) videoUrl = null;
     }
 
     void loadLogo()

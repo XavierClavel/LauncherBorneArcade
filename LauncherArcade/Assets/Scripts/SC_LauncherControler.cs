@@ -9,8 +9,10 @@ using TMPro;
 using UnityEngine.InputSystem;
 using System;
 using Plugins.SystemVolumePlugin;
+using System.Runtime.InteropServices;
+using UnityEngine.Video;
 
-public class SC_LauncherControler : MonoBehaviour, Controls.IArcadeActions
+public class SC_LauncherControler : MonoBehaviour
 {
     public static string pathToGames;
     public TextMeshProUGUI newsZone;
@@ -41,11 +43,22 @@ public class SC_LauncherControler : MonoBehaviour, Controls.IArcadeActions
     [SerializeField] TextMeshProUGUI infoDescription;
     [SerializeField] GameObject volumeWindow;
     [SerializeField] Slider volumeSlider;
+    [SerializeField] VideoPlayer videoPlayer;
+    [SerializeField] Image imageDisplay;
+    [SerializeField] TextMeshProUGUI nbJoueursDisplay;
     WaitForSeconds holdPeriod = new WaitForSeconds(0.07f);
+    WaitForSeconds holdPeriodScroll = new WaitForSeconds(0.3f);
     [SerializeField] Image bg;
+
+    [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")] static extern IntPtr GetActiveWindow();
+    IntPtr launcherWindow;
 
     void Awake()
     {
+        launcherWindow = GetActiveWindow();
+
         Application.runInBackground = false;
         Application.targetFrameRate = -1; //laisser la possibilité de faire du 144Hz
 
@@ -74,10 +87,14 @@ public class SC_LauncherControler : MonoBehaviour, Controls.IArcadeActions
 
         // Bind controls
         controls.Arcade.Enter.performed += OnEnter;
-        controls.Arcade.Left.performed += OnLeft;
-        controls.Arcade.Right.performed += OnRight;
-        controls.Arcade.Up.performed += OnUp;
-        controls.Arcade.Down.performed += OnDown;
+        controls.Arcade.Left.started += OnLeft_started;
+        controls.Arcade.Left.canceled += OnLeft_canceled;
+        controls.Arcade.Right.started += OnRight_started;
+        controls.Arcade.Right.canceled += OnRight_canceled;
+        controls.Arcade.Up.started += OnUp_started;
+        controls.Arcade.Up.canceled += OnUp_canceled;
+        controls.Arcade.Down.started += OnDown_started;
+        controls.Arcade.Down.canceled += OnDown_canceled;
         controls.Arcade.Info.performed += OnInfo;
         controls.Arcade.Volume.performed += OnVolume;
 
@@ -92,21 +109,21 @@ public class SC_LauncherControler : MonoBehaviour, Controls.IArcadeActions
 
         foreach (Game game in games)
         {
-            for (int i = 0; i < 4; i++)
-            {
-                GameObject gridTile = Instantiate(tileTemplate);
-                RectTransform rectTransform = gridTile.GetComponent<RectTransform>();
-                rectTransform.SetParent(gridLayout.transform);
-                rectTransform.localPosition = Vector3.zero;
-                rectTransform.localScale = Vector3.one;
-                rectTransform.localRotation = Quaternion.identity;
+            //for (int i = 0; i < 4; i++)
+            //{
+            GameObject gridTile = Instantiate(tileTemplate);
+            RectTransform rectTransform = gridTile.GetComponent<RectTransform>();
+            rectTransform.SetParent(gridLayout.transform);
+            rectTransform.localPosition = Vector3.zero;
+            rectTransform.localScale = Vector3.one;
+            rectTransform.localRotation = Quaternion.identity;
 
-                gridTile.GetComponent<Image>().sprite = game.logo;
-                gridTile.GetComponentInChildren<TextMeshProUGUI>().text = game.name;
-                gridTile.SetActive(true);
+            gridTile.GetComponent<Image>().sprite = game.logo;
+            gridTile.GetComponentInChildren<TextMeshProUGUI>().text = game.name;
+            gridTile.SetActive(true);
 
-                gridTiles.Add(gridTile);
-            }
+            gridTiles.Add(gridTile);
+            //}
         }
 
         gridTiles[0].GetComponent<Animator>().SetTrigger("Highlighted");
@@ -132,6 +149,8 @@ public class SC_LauncherControler : MonoBehaviour, Controls.IArcadeActions
         }
         else
         {  //game is starting
+            bg.color = Color.red;
+            StopCoroutine("TrySetForeground");
             HideGameStartedMessage();
         }
         yield return null;
@@ -163,10 +182,63 @@ public class SC_LauncherControler : MonoBehaviour, Controls.IArcadeActions
         Game currentGame = getCurrentGame();
         infoName.text = currentGame.name;
         infoDescription.text = currentGame.description;
+        InfoController.SetupControlsInfo(currentGame.controlsInfo);
+        if (currentGame.videoUrl != null)
+        {
+            imageDisplay.gameObject.SetActive(false);
+            videoPlayer.gameObject.SetActive(true);
+            videoPlayer.url = currentGame.videoUrl;
+        }
+        else
+        {
+            videoPlayer.gameObject.SetActive(false);
+            imageDisplay.gameObject.SetActive(true);
+            imageDisplay.sprite = currentGame.logo;
+        }
+        string nbDisplay;
+        switch (currentGame.controlsInfo.nb_joueurs)
+        {
+            case "1":
+                nbDisplay = "1 joueur";
+                break;
+
+            case "2":
+                nbDisplay = "2 joueurs";
+                break;
+
+            case "1-2":
+                nbDisplay = "1-2 joueurs";
+                break;
+
+            default:
+                nbDisplay = "? joueurs";
+                break;
+        }
+        nbJoueursDisplay.text = nbDisplay;
         infoWindow.SetActive(true);
     }
 
-    public void OnLeft(InputAction.CallbackContext context)
+    public void OnLeft_started(InputAction.CallbackContext context)
+    {
+        StopCoroutine("OnRightHold");
+        StartCoroutine("OnLeftHold");
+    }
+
+    public void OnLeft_canceled(InputAction.CallbackContext context)
+    {
+        StopCoroutine("OnLeftHold");
+    }
+
+    IEnumerator OnLeftHold()
+    {
+        while (true)
+        {
+            OnLeft();
+            yield return holdPeriodScroll;
+        }
+    }
+
+    public void OnLeft()
     {
         infoWindow.SetActive(false);
         if (isInMainDisplay)
@@ -183,7 +255,28 @@ public class SC_LauncherControler : MonoBehaviour, Controls.IArcadeActions
             Animate();
         }
     }
-    public void OnRight(InputAction.CallbackContext context)
+
+    public void OnRight_started(InputAction.CallbackContext context)
+    {
+        StopCoroutine("OnLeftHold");
+        StartCoroutine("OnRightHold");
+    }
+
+    public void OnRight_canceled(InputAction.CallbackContext context)
+    {
+        StopCoroutine("OnRightHold");
+    }
+
+    IEnumerator OnRightHold()
+    {
+        while (true)
+        {
+            OnRight();
+            yield return holdPeriodScroll;
+        }
+    }
+
+    public void OnRight()
     {
         infoWindow.SetActive(false);
         if (isInMainDisplay)
@@ -201,7 +294,27 @@ public class SC_LauncherControler : MonoBehaviour, Controls.IArcadeActions
         }
     }
 
-    public void OnUp(InputAction.CallbackContext context)
+    public void OnUp_started(InputAction.CallbackContext context)
+    {
+        StopCoroutine("OnDownHold");
+        StartCoroutine("OnUpHold");
+    }
+
+    public void OnUp_canceled(InputAction.CallbackContext context)
+    {
+        StopCoroutine("OnUpHold");
+    }
+
+    IEnumerator OnUpHold()
+    {
+        while (true)
+        {
+            OnUp();
+            yield return holdPeriodScroll;
+        }
+    }
+
+    public void OnUp()
     {
         infoWindow.SetActive(false);
         if (isInMainDisplay) return;
@@ -219,7 +332,27 @@ public class SC_LauncherControler : MonoBehaviour, Controls.IArcadeActions
         }
     }
 
-    public void OnDown(InputAction.CallbackContext context)
+    public void OnDown_started(InputAction.CallbackContext context)
+    {
+        StopCoroutine("OnUpHold");
+        StartCoroutine("OnDownHold");
+    }
+
+    public void OnDown_canceled(InputAction.CallbackContext context)
+    {
+        StopCoroutine("OnDownHold");
+    }
+
+    IEnumerator OnDownHold()
+    {
+        while (true)
+        {
+            OnDown();
+            yield return holdPeriodScroll;
+        }
+    }
+
+    public void OnDown()
     {
         infoWindow.SetActive(false);
         if (isInMainDisplay)
@@ -318,6 +451,25 @@ public class SC_LauncherControler : MonoBehaviour, Controls.IArcadeActions
         controls.Disable();
         ShowGameStartedMessage(game.name);
         process = Process.Start(game.pathToExe);
+        //SetForegroundWindow(process.MainWindowHandle);
+        SetForegroundWindow(launcherWindow);
+        StartCoroutine("TrySetForeground");
+        //try using method every few seconds in coroutine until unfocus
+    }
+
+    IEnumerator TrySetForeground()
+    {
+        WaitForEndOfFrame waitFrame = new WaitForEndOfFrame();
+        WaitForSeconds tryForegroundPeriod = new WaitForSeconds(5f);
+        //yield return new WaitWhile(() => launcherWindow == GetActiveWindow());
+        while (true)
+        {
+            bg.color = Color.magenta;
+            //SetForegroundWindow(process.MainWindowHandle);
+            SetForegroundWindow(launcherWindow);
+            yield return waitFrame;
+            //yield return tryForegroundPeriod
+        }
     }
 
     // Show the correct game depending on the currenGameIndex
