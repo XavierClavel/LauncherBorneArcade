@@ -1,23 +1,22 @@
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using System.Drawing;
 using UnityEngine;
 
 public class SC_LauncherModel
 {
-    private string pathToGames;
+    public static string pathToGames;
+    public static string metaFolder = "/Meta/";
 
-    public SC_LauncherModel(string pathToGames)
+    public SC_LauncherModel(string pathToGamesValue)
     {
-        this.pathToGames = pathToGames;
+        pathToGames = pathToGamesValue;
     }
 
     // Charge le contenue de "news.txt" du dossier Games/ dans la zone de news
-    public string GetNews()
+    public List<string> GetNews()
     {
-        var pathNewsTxt = pathToGames + "news.txt";
+        var pathNewsTxt = pathToGames + metaFolder + "news.txt";
         var strBuilder = new StringBuilder();
 
 
@@ -37,17 +36,17 @@ public class SC_LauncherModel
             strBuilder.Append("Pas de news");
         }
 
-        return strBuilder.ToString();
+        return strBuilder.ToString().GetAllStrBetweenTag("<news>");
     }
 
 
     // Get all games in Games/ directory and fill games with all the info
-    public List<Game> GetGamesList()
+    public List<Item> GetGamesList()
     {
         var dirInfo = new DirectoryInfo(pathToGames);
         var directoryInfo = dirInfo.GetDirectories();
 
-        List<Game> games = new List<Game>();
+        List<Item> games = new List<Item>();
 
         foreach (var directory in directoryInfo)
         {
@@ -55,20 +54,30 @@ public class SC_LauncherModel
 
             var files = System.IO.Directory.GetFiles(pathToGameDir, "*.exe");
 
+            if (files.Length == 0) continue;
+
             // TODO check si c'est le bon .exe
             string pathToExe = files[0];
 
-            UnityEngine.Debug.Log(files[0].ToString());
             string name = files[0].Split('\\')[1].Split('.')[0];
 
             var pathToGameMeta = pathToGameDir + "/GameMeta";
-            // Create the directory only if it don't existe 
+            // Create the directory only if it don't exist
             System.IO.Directory.CreateDirectory(pathToGameMeta);
 
             games.Add(new Game(pathToGameDir, pathToExe, pathToGameMeta, name));
         }
-        Resources.UnloadUnusedAssets(); //prevent memory leak
+        Resources.UnloadUnusedAssets(); //to avoid keeping all pictures loaded in memory
+
+        OnGamesLoaded();
 
         return games;
+    }
+
+    void OnGamesLoaded()
+    {
+        Genre.OnGenresLoaded();
+        Collection.OnCollectionsLoaded();
+        Game.OnGamesLoaded();
     }
 }

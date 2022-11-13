@@ -33,7 +33,6 @@
 ## TODO:
 	-Classement des jeux les plus lancés/nouveaux pour les mettre en premier
 	-extract l'image de l'exe si elle n'existe pas dans le GameMeta (https://ourcodeworld.com/articles/read/1422/how-to-extract-the-icon-from-an-executable-with-c-sharp-in-winforms)
-	-Tourner entre plusieurs news en utilisant un séparateur pour différencier les news ex <->
 	-mettre tous les jeux dans un git pour pouvoir en ajoutant et en update facilement 
 	-on pourrait même envisager d'avoir un script qui pull automatiquement quand on lance le launcher
 	-Design du panneau de contrôle du volume
@@ -56,3 +55,9 @@
 	#Hold pour faire défiler
 	#Affichage des contrôles du jeu
 	#Affichage d'une vidéo demo
+	#Support du tri par nombre de joueurs
+	#Support du tri par genre
+	#Support du tri par collection
+	#Possibilité d'avoir plusieurs news qui s'affichent à tour de rôle
+	#Affichage de tous les jeux en mode debug
+	#Affichage des collections en grille

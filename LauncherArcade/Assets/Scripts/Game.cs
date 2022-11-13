@@ -1,19 +1,19 @@
 using UnityEngine;
 using UnityEngine.Video;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-public class Game
+public class Game : Item
 {
     public string pathToGameDir { get; set; }
     public string pathToExe { get; set; }
     public string pathToGameMeta { get; set; }
-    public Sprite logo = null;
-    public string name;
     public string description = null;
     public string videoUrl;
-    const float PixelsPerUnit = 100.0f;
     public ControlsInfo controlsInfo;
+    public static List<Item> onePlayer_games = new List<Item>();
+    public static List<Item> twoPlayer_games = new List<Item>();
 
     public Game(string pathToGameDir, string pathToExe, string pathToGameMeta, string name)
     {
@@ -22,58 +22,43 @@ public class Game
         this.pathToGameMeta = pathToGameMeta;
         this.name = name;
 
-        loadLogo();
+        loadImage(pathToGameMeta + "/logo.png");
         loadDescription();
         loadControls();
         loadVideo();
+
+        Genre.AttributeGame(this);
+        Collection.AttributeGame(this);
     }
 
     void loadDescription()
     {
         string pathToDescription = pathToGameMeta + "/description.txt";
 
-        var strBuilder = new StringBuilder();
-        if (File.Exists(pathToDescription))
-        {
-            StreamReader reader = new StreamReader(pathToDescription);
-
-            while (!reader.EndOfStream)
-            {
-                strBuilder.Append(reader.ReadLine() + "\n");
-            }
-
-            reader.Close();
-        }
-        else
-        {
-            strBuilder.Append("Un jeu de 7Fault");
-        }
-
-        description = strBuilder.ToString();
+        description = loadText(pathToDescription, "Un jeu de 7Fault");
     }
 
     void loadControls()
     {
         string pathToDescription = pathToGameMeta + "/controls.txt";
 
-        var strBuilder = new StringBuilder();
-        if (File.Exists(pathToDescription))
+        controlsInfo = new ControlsInfo(loadText(pathToDescription, ""));
+
+        switch (controlsInfo.nb_joueurs)
         {
-            StreamReader reader = new StreamReader(pathToDescription);
+            case "1":
+                onePlayer_games.Add(this);
+                break;
 
-            while (!reader.EndOfStream)
-            {
-                strBuilder.Append(reader.ReadLine() + "\n");
-            }
+            case "2":
+                twoPlayer_games.Add(this);
+                break;
 
-            reader.Close();
+            case "1-2":
+                onePlayer_games.Add(this);
+                twoPlayer_games.Add(this);
+                break;
         }
-        else
-        {
-            strBuilder.Append("Un jeu de 7Fault");
-        }
-
-        controlsInfo = new ControlsInfo(strBuilder.ToString());
     }
 
     void loadVideo()
@@ -82,36 +67,20 @@ public class Game
         if (!File.Exists(videoUrl)) videoUrl = null;
     }
 
-    void loadLogo()
+    public override void OnEnter()
     {
-        //Load image no matter name of the file
-        //string[] imageFiles = Directory.GetFiles(gameToShow.pathToGameMeta, "*.png*", SearchOption.AllDirectories);
-        //if (imageFiles.Length > 0) pathToGameLogo = imageFiles[0];
-
-        string pathToGameLogo = pathToGameMeta + "/logo.png";
-        if (File.Exists(pathToGameLogo))
-        {
-            Texture2D spriteTexture = LoadTexture(pathToGameLogo);
-            logo = Sprite.Create(spriteTexture, new Rect(0, 0, spriteTexture.width, spriteTexture.height), new Vector2(0, 0), PixelsPerUnit);
-            Resources.UnloadUnusedAssets(); //prevent memory leak
-        }
-        else
-        {
-            logo = Resources.Load<Sprite>("logo");
-        }
+        SC_LauncherControler.LaunchGame(this);
     }
 
-    private Texture2D LoadTexture(string filePath)
+    public override void OnInfo()
     {
-        Texture2D tex2D;
-        byte[] fileData;
-        fileData = File.ReadAllBytes(filePath);
-        tex2D = new Texture2D(2, 2);           // Create new "empty" texture
-        if (tex2D.LoadImage(fileData))
-        {          // Load the imagedata into the texture (size is set automatically)
-            return tex2D;                 // If data = readable -> return texture
-        }
-        return null;
+        SC_LauncherControler.DisplayInfo(this);
+    }
+
+    public static void OnGamesLoaded()
+    {
+        new MetaCollection("1 Player", onePlayer_games);
+        new MetaCollection("2 Players", onePlayer_games);
     }
 
 

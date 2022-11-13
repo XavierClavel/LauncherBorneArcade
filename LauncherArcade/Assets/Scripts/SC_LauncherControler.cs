@@ -12,13 +12,15 @@ using Plugins.SystemVolumePlugin;
 using System.Runtime.InteropServices;
 using UnityEngine.Video;
 
+public enum state { mainDisplay, games, collections }
+
 public class SC_LauncherControler : MonoBehaviour
 {
     public static string pathToGames;
     public TextMeshProUGUI newsZone;
     public TextMeshProUGUI gameNumberTxt;
 
-    public Transform gameStartedTransfort;
+    public Transform gameStartedTransform;
     private TextMeshProUGUI gameStartedText;
 
     private Process process;
@@ -27,36 +29,47 @@ public class SC_LauncherControler : MonoBehaviour
 
     [SerializeField] private GameObject[] gamestiles = new GameObject[3];
     [SerializeField] GameObject mainLayout;
-    [SerializeField] GameObject tileTemplate;
-    [SerializeField] GameObject gridLayout;
-    private List<Game> games;
+    [SerializeField] GameObject gridPage;
+    private static List<Item> games;
     private int nbGames;
-    private int currentGameIndex;
-    int currentGridIndex = 0;
-    int lastGridIndex = 0;
-    const int nbColumns = 7;
-    bool isInMainDisplay = true;
-    List<GameObject> gridTiles = new List<GameObject>();
-    RectTransform gridTransform;
+    private static int currentGameIndex;
+    public static bool isInMainDisplay = true;
     [SerializeField] GameObject infoWindow;
     [SerializeField] TextMeshProUGUI infoName;
     [SerializeField] TextMeshProUGUI infoDescription;
     [SerializeField] GameObject volumeWindow;
     [SerializeField] Slider volumeSlider;
-    [SerializeField] VideoPlayer videoPlayer;
-    [SerializeField] Image imageDisplay;
-    [SerializeField] TextMeshProUGUI nbJoueursDisplay;
     WaitForSeconds holdPeriod = new WaitForSeconds(0.07f);
     WaitForSeconds holdPeriodScroll = new WaitForSeconds(0.3f);
-    [SerializeField] Image bg;
+    WaitForSeconds newsHold = new WaitForSeconds(5f);
+    public Image bg;
+    public static InfoController infoController;
+    IntPtr launcherWindow;
 
+    public GridNavigator gridNavigator;
+    public static SC_LauncherControler instance;
+    public static state currentState = state.mainDisplay;
+
+
+    #region DLLs
     [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr hWnd);
 
     [DllImport("user32.dll")] static extern IntPtr GetActiveWindow();
-    IntPtr launcherWindow;
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    static extern bool LockSetForegroundWindow(uint uLockCode);
+
+    #endregion
 
     void Awake()
     {
+        LockSetForegroundWindow(1); //prevent app from putting itself in foreground
+        //try SetWinEventHook if it does not work
+
+        instance = this;
+        GridNavigator.launcherControler = this;
+
         launcherWindow = GetActiveWindow();
 
         Application.runInBackground = false;
@@ -64,26 +77,28 @@ public class SC_LauncherControler : MonoBehaviour
 
         controls = new Controls();
 
-        pathToGames = Application.dataPath + "/../Games/";
+        if (Application.isEditor) pathToGames = "C:/Users/xrcla/Documents/Game Dev/Launcher Build/Games/"; //debug
+        else pathToGames = Application.dataPath + "/../Games/";
+
         model = new SC_LauncherModel(pathToGames);
         currentGameIndex = 0;
 
         // Hide GameStarted message
-        gameStartedText = gameStartedTransfort.Find("GameStartedBackground").Find("GameStartedText").GetComponent<TextMeshProUGUI>();
+        gameStartedText = gameStartedTransform.Find("GameStartedBackground").Find("GameStartedText").GetComponent<TextMeshProUGUI>();
         HideGameStartedMessage();
         infoWindow.SetActive(false);
         volumeWindow.SetActive(false);
 
+
         // Get games list and show them
         games = model.GetGamesList();
-        //games = SetupTestEnvironment.getGamesDummy(); // For coding/Debug
         nbGames = games.Count;
 
         updateGamesPreviews(currentGameIndex);
 
         // Update texts
         gameNumberTxt.text = "1/" + games.Count;
-        newsZone.text = model.GetNews();
+        DisplayNews();
 
         // Bind controls
         controls.Arcade.Enter.performed += OnEnter;
@@ -104,34 +119,46 @@ public class SC_LauncherControler : MonoBehaviour
         controls.Volume.VolumeDown.canceled += VolumeDown_canceled;
         controls.Volume.VolumeExit.performed += OnVolumeExit;
 
-        RectTransform templateRectTransform = tileTemplate.GetComponent<RectTransform>();
-        gridTransform = gridLayout.GetComponent<RectTransform>();
-
-        foreach (Game game in games)
-        {
-            //for (int i = 0; i < 4; i++)
-            //{
-            GameObject gridTile = Instantiate(tileTemplate);
-            RectTransform rectTransform = gridTile.GetComponent<RectTransform>();
-            rectTransform.SetParent(gridLayout.transform);
-            rectTransform.localPosition = Vector3.zero;
-            rectTransform.localScale = Vector3.one;
-            rectTransform.localRotation = Quaternion.identity;
-
-            gridTile.GetComponent<Image>().sprite = game.logo;
-            gridTile.GetComponentInChildren<TextMeshProUGUI>().text = game.name;
-            gridTile.SetActive(true);
-
-            gridTiles.Add(gridTile);
-            //}
-        }
-
-        gridTiles[0].GetComponent<Animator>().SetTrigger("Highlighted");
-
-        //nbGames = gridTiles.Count;
+        //Get system volume
         SystemVolumePlugin.InitializeVolume();
         volumeSlider.value = SystemVolumePlugin.GetVolume() * 100;
 
+        //For test purposes
+        Genre.InitializeCollections();
+        Collection.InitializeCollections();
+
+        // gridNavigator.Initialize(Collection.collections);
+        // gridNavigator.Initialize(Genre.collections);
+        //gridNavigator.Initialize(Game.onePlayer_games, this);
+        // gridNavigator.Initialize(games);
+        // gridNavigator.Initialize(Game.twoPlayer_games, this);
+        // gridNavigator.Initialize(Genre.GetGames("Arcade"), this);
+        //gridNavigator.Initialize(Collection.GetGames("Jeux sous le sapin 2021"), this);
+
+    }
+
+    void DisplayNews()
+    {
+        List<string> news = model.GetNews();
+        int nbNews = news.Count;
+        if (nbNews == 0) return;
+        else if (nbNews == 1) newsZone.text = news[0];
+        else StartCoroutine("RotateNews", news);
+    }
+
+    IEnumerator RotateNews(List<String> news)
+    {
+        int nbNews = news.Count;
+        while (true)
+        {
+            int newsIndex = 0;
+            while (true)
+            {
+                newsZone.text = news[newsIndex];
+                newsIndex = modulo(newsIndex + 1, nbNews);
+                yield return newsHold;
+            }
+        }
     }
 
 
@@ -149,17 +176,17 @@ public class SC_LauncherControler : MonoBehaviour
         }
         else
         {  //game is starting
-            bg.color = Color.red;
+            //int nbNews = news.Count;
             StopCoroutine("TrySetForeground");
             HideGameStartedMessage();
         }
         yield return null;
     }
 
-    Game getCurrentGame()
+    static Item getCurrentItem()
     {
         if (isInMainDisplay) return games[currentGameIndex];
-        else return games[currentGridIndex];
+        else return instance.gridNavigator.getCurrentItem();
     }
 
     #region navigation
@@ -167,55 +194,48 @@ public class SC_LauncherControler : MonoBehaviour
     // Gestion of controls
     public void OnEnter(InputAction.CallbackContext context)
     {
-        infoWindow.SetActive(false);
-        LaunchGame(getCurrentGame());
+        ExitInfo();
+
+        getCurrentItem().OnEnter();
     }
 
     public void OnInfo(InputAction.CallbackContext context)
     {
-        if (infoWindow.activeInHierarchy)
+        getCurrentItem().OnInfo();
+    }
+
+    public static void DisplayInfo(Game game)
+    {
+        if (instance.infoWindow.activeInHierarchy)
         {
-            infoWindow.SetActive(false);
+            instance.ExitInfo();
             return;
         }
 
-        Game currentGame = getCurrentGame();
-        infoName.text = currentGame.name;
-        infoDescription.text = currentGame.description;
-        InfoController.SetupControlsInfo(currentGame.controlsInfo);
-        if (currentGame.videoUrl != null)
-        {
-            imageDisplay.gameObject.SetActive(false);
-            videoPlayer.gameObject.SetActive(true);
-            videoPlayer.url = currentGame.videoUrl;
-        }
-        else
-        {
-            videoPlayer.gameObject.SetActive(false);
-            imageDisplay.gameObject.SetActive(true);
-            imageDisplay.sprite = currentGame.logo;
-        }
-        string nbDisplay;
-        switch (currentGame.controlsInfo.nb_joueurs)
-        {
-            case "1":
-                nbDisplay = "1 joueur";
-                break;
+        instance.infoName.text = game.name;
+        instance.infoDescription.text = game.description;
+        infoController.SetupControlsInfo(game);
+        instance.infoWindow.SetActive(true);
+    }
 
-            case "2":
-                nbDisplay = "2 joueurs";
-                break;
-
-            case "1-2":
-                nbDisplay = "1-2 joueurs";
-                break;
-
-            default:
-                nbDisplay = "? joueurs";
-                break;
+    public void SetInfo(Game game)
+    {
+        if (infoWindow.activeInHierarchy)
+        {
+            ExitInfo();
+            return;
         }
-        nbJoueursDisplay.text = nbDisplay;
+
+        infoName.text = game.name;
+        infoDescription.text = game.description;
+        infoController.SetupControlsInfo(game);
         infoWindow.SetActive(true);
+    }
+
+    public void ExitInfo()
+    {
+        infoController.ResetVideoPlayer();
+        infoWindow.SetActive(false);
     }
 
     public void OnLeft_started(InputAction.CallbackContext context)
@@ -240,20 +260,13 @@ public class SC_LauncherControler : MonoBehaviour
 
     public void OnLeft()
     {
-        infoWindow.SetActive(false);
+        ExitInfo();
         if (isInMainDisplay)
         {
             currentGameIndex = modulo(currentGameIndex - 1, nbGames);
             updateGamesPreviews(currentGameIndex);
         }
-        else
-        {
-            if (currentGridIndex == 0) return;
-
-            if (currentGridIndex % nbColumns == 0) gridTransform.anchoredPosition -= 300 * Vector2.up;
-            currentGridIndex -= 1;
-            Animate();
-        }
+        else gridNavigator.OnLeft();
     }
 
     public void OnRight_started(InputAction.CallbackContext context)
@@ -278,20 +291,13 @@ public class SC_LauncherControler : MonoBehaviour
 
     public void OnRight()
     {
-        infoWindow.SetActive(false);
+        ExitInfo();
         if (isInMainDisplay)
         {
             currentGameIndex = modulo(currentGameIndex + 1, nbGames);
             updateGamesPreviews(currentGameIndex);
         }
-        else
-        {
-            if (currentGridIndex == nbGames - 1) return;
-
-            if (currentGridIndex != 0 && currentGridIndex % nbColumns == nbColumns - 1) gridTransform.anchoredPosition += 300 * Vector2.up;
-            currentGridIndex += 1;
-            Animate();
-        }
+        else gridNavigator.OnRight();
     }
 
     public void OnUp_started(InputAction.CallbackContext context)
@@ -316,20 +322,10 @@ public class SC_LauncherControler : MonoBehaviour
 
     public void OnUp()
     {
-        infoWindow.SetActive(false);
+        ExitInfo();
         if (isInMainDisplay) return;
-        if (currentGridIndex < nbColumns)
-        {
-            gridLayout.SetActive(false);
-            mainLayout.SetActive(true);
-            isInMainDisplay = true;
-        }
-        else
-        {
-            currentGridIndex -= nbColumns;
-            Animate();
-            gridTransform.anchoredPosition -= 300 * Vector2.up;
-        }
+        else gridNavigator.OnUp();
+
     }
 
     public void OnDown_started(InputAction.CallbackContext context)
@@ -354,22 +350,18 @@ public class SC_LauncherControler : MonoBehaviour
 
     public void OnDown()
     {
-        infoWindow.SetActive(false);
+        ExitInfo();
         if (isInMainDisplay)
         {
             mainLayout.SetActive(false);
-            gridLayout.SetActive(true);
+            gridPage.SetActive(true);
             isInMainDisplay = false;
-            gridTiles[currentGridIndex].GetComponent<Animator>().SetTrigger("Highlighted");
+
+            //gridNavigator.Initialize(games);
+            gridNavigator.Initialize(MetaCollection.metaCollections);
+
         }
-        else
-        {
-            int newValue = currentGridIndex + nbColumns;
-            if (newValue >= nbGames) return;
-            currentGridIndex = newValue;
-            Animate();
-            gridTransform.anchoredPosition += 300 * Vector2.up;
-        }
+        else gridNavigator.OnDown();
     }
 
     #endregion
@@ -437,23 +429,18 @@ public class SC_LauncherControler : MonoBehaviour
 
     #endregion
 
-
-    public void Animate()
-    {
-        gridTiles[lastGridIndex].GetComponent<Animator>().SetTrigger("Normal");
-        gridTiles[currentGridIndex].GetComponent<Animator>().SetTrigger("Highlighted");
-        lastGridIndex = currentGridIndex;
-    }
-
     // Launch the game (at the current game index) in the main emplacement 
-    private void LaunchGame(Game game)
+    public static void LaunchGame(Game game)
     {
-        controls.Disable();
-        ShowGameStartedMessage(game.name);
-        process = Process.Start(game.pathToExe);
+        instance.controls.Disable();
+        instance.ShowGameStartedMessage(game.name);
+        instance.process = Process.Start(game.pathToExe);
+        //bg.color = Color.red;
+        instance.process.WaitForInputIdle();
+        //bg.color = Color.green;
         //SetForegroundWindow(process.MainWindowHandle);
-        SetForegroundWindow(launcherWindow);
-        StartCoroutine("TrySetForeground");
+        //SetForegroundWindow(launcherWindow);
+        instance.StartCoroutine("TrySetForeground");
         //try using method every few seconds in coroutine until unfocus
     }
 
@@ -461,19 +448,23 @@ public class SC_LauncherControler : MonoBehaviour
     {
         WaitForEndOfFrame waitFrame = new WaitForEndOfFrame();
         WaitForSeconds tryForegroundPeriod = new WaitForSeconds(5f);
-        //yield return new WaitWhile(() => launcherWindow == GetActiveWindow());
-        while (true)
-        {
-            bg.color = Color.magenta;
-            //SetForegroundWindow(process.MainWindowHandle);
-            SetForegroundWindow(launcherWindow);
-            yield return waitFrame;
-            //yield return tryForegroundPeriod
-        }
+        // yield return new WaitWhile(() => launcherWindow == GetActiveWindow());
+
+        bg.color = Color.green;
+        yield return new WaitWhile(() => process.Responding);
+        // while (!process.Responding)
+        // {
+        //     //bg.color = Color.magenta;
+        //     //SetForegroundWindow(process.MainWindowHandle);
+        //     SetForegroundWindow(launcherWindow);
+        //     yield return waitFrame;
+        //     //yield return tryForegroundPeriod
+        // }
+        bg.color = Color.blue;
     }
 
     // Show the correct game depending on the currenGameIndex
-    private void updateGamesPreviews(int currentGameIndex)
+    public void updateGamesPreviews(int currentGameIndex)
     {
         int nbGames = games.Count;
         if (nbGames < 3)
@@ -512,21 +503,21 @@ public class SC_LauncherControler : MonoBehaviour
     }
 
     // Load the gameToShow in the correct emplacement (tile)
-    private void loadGameData(Game gameToShow, int tileIndex)
+    private void loadGameData(Item gameToShow, int tileIndex)
     {
-        gamestiles[tileIndex].GetComponent<Image>().sprite = gameToShow.logo;
+        gamestiles[tileIndex].GetComponent<Image>().sprite = gameToShow.image;
         gamestiles[tileIndex].GetComponentInChildren<TextMeshProUGUI>().text = gameToShow.name;
     }
 
     private void ShowGameStartedMessage(string gameName)
     {
-        gameStartedTransfort.gameObject.SetActive(true);
+        gameStartedTransform.gameObject.SetActive(true);
         gameStartedText.text = "starting " + gameName;
     }
 
     private void HideGameStartedMessage()
     {
-        gameStartedTransfort.gameObject.SetActive(false);
+        gameStartedTransform.gameObject.SetActive(false);
     }
 
     private int modulo(int a, int n)
