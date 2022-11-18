@@ -15,10 +15,12 @@ public class MetaCollection : Item
         metaCollections.Add(this);
         string pathToImage = SC_LauncherModel.pathToGames + SC_LauncherModel.metaFolder + name + ".png";
         loadImage(pathToImage);
+
+        SC_LauncherControler.searchList.Add(this);
     }
 
     public override void OnEnter()
     {
-        GridNavigator.instance.Initialize(items);
+        SC_LauncherControler.gridNavigator.Initialize(items);
     }
 }

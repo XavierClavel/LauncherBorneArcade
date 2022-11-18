@@ -69,12 +69,10 @@ public class SC_LauncherModel
         }
         Resources.UnloadUnusedAssets(); //to avoid keeping all pictures loaded in memory
 
-        OnGamesLoaded();
-
         return games;
     }
 
-    void OnGamesLoaded()
+    public void OnGamesLoaded()
     {
         Genre.OnGenresLoaded();
         Collection.OnCollectionsLoaded();

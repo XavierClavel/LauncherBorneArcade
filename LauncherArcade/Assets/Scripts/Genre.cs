@@ -7,7 +7,6 @@ public class Genre : Item
     public List<Item> games = new List<Item>();
     public static List<Item> collections = new List<Item>();
     public static List<string> genres = new List<string>();
-    public static Dictionary<string, List<Game>> dictionary = new Dictionary<string, List<Game>>();
 
     public Genre(Game game)
     {
@@ -16,6 +15,7 @@ public class Genre : Item
 
         string pathToImage = SC_LauncherModel.pathToGames + SC_LauncherModel.metaFolder + name + ".png";
         loadImage(pathToImage);
+
     }
 
 
@@ -34,6 +34,7 @@ public class Genre : Item
         {
             genres.Add(genre);
             collections.Add(new Genre(game));
+            collections.Add(new Genre(game)); collections.Add(new Genre(game)); collections.Add(new Genre(game)); collections.Add(new Genre(game)); collections.Add(new Genre(game)); collections.Add(new Genre(game)); collections.Add(new Genre(game));
         }
     }
     public static bool Exists(string genre)
@@ -41,28 +42,18 @@ public class Genre : Item
         return genres.Contains(genre);
     }
 
-    public static void InitializeCollections()
-    {
-        // foreach (Genre genre in collections)
-        // {
-        //     dictionary[genre.name] = genre.games;
-        // }
-    }
-
-    public static List<Game> GetGames(string genre)
-    {
-        if (!Exists(genre)) return null;
-        return dictionary[genre];
-    }
-
     public override void OnEnter()
     {
-        SC_LauncherControler.instance.gridNavigator.Initialize(games);
+        SC_LauncherControler.gridNavigator.Initialize(games);
     }
 
     public static void OnGenresLoaded()
     {
         new MetaCollection("Genres", collections);
+        foreach (Genre genre in collections)
+        {
+            new ChoiceMultiSelectable(genre.name, genre.games);
+        }
     }
 
 }

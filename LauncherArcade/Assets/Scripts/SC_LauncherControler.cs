@@ -23,14 +23,14 @@ public class SC_LauncherControler : MonoBehaviour
     public Transform gameStartedTransform;
     private TextMeshProUGUI gameStartedText;
 
-    private Process process;
+    private static Process process;
     private SC_LauncherModel model;
     private Controls controls;
 
     [SerializeField] private GameObject[] gamestiles = new GameObject[3];
     [SerializeField] GameObject mainLayout;
     [SerializeField] GameObject gridPage;
-    private static List<Item> games;
+    public static List<Item> games;
     private int nbGames;
     private static int currentGameIndex;
     public static bool isInMainDisplay = true;
@@ -45,16 +45,25 @@ public class SC_LauncherControler : MonoBehaviour
     public Image bg;
     public static InfoController infoController;
     IntPtr launcherWindow;
+    [SerializeField] GridNavigator mainGridNavigator;
 
-    public GridNavigator gridNavigator;
+    public static GridNavigator gridNavigator;
     public static SC_LauncherControler instance;
     public static state currentState = state.mainDisplay;
+    [SerializeField] SearchManager searchManager;
+    public static List<Item> searchList = new List<Item>();
+    [SerializeField] GridNavigator search_gridNavigator;
 
 
     #region DLLs
     [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr hWnd);
 
     [DllImport("user32.dll")] static extern IntPtr GetActiveWindow();
+
+    [DllImport("user32.dll", EntryPoint = "SetWindowPos")] public static extern IntPtr SetWindowPos(IntPtr hWnd, int hWndInsertAfter, int x, int Y, int cx, int cy, int wFlags);
+    const int HWND_TOPMOST = -1;
+    const int SWP_NOMOVE = 0x0002;
+    const int SWP_NOSIZE = 0x0001;
 
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -64,10 +73,11 @@ public class SC_LauncherControler : MonoBehaviour
 
     void Awake()
     {
-        LockSetForegroundWindow(1); //prevent app from putting itself in foreground
+        //LockSetForegroundWindow(1); //prevent app from putting itself in foreground
         //try SetWinEventHook if it does not work
 
         instance = this;
+        gridNavigator = instance.mainGridNavigator;
         GridNavigator.launcherControler = this;
 
         launcherWindow = GetActiveWindow();
@@ -92,6 +102,7 @@ public class SC_LauncherControler : MonoBehaviour
 
         // Get games list and show them
         games = model.GetGamesList();
+        model.OnGamesLoaded();
         nbGames = games.Count;
 
         updateGamesPreviews(currentGameIndex);
@@ -123,10 +134,6 @@ public class SC_LauncherControler : MonoBehaviour
         SystemVolumePlugin.InitializeVolume();
         volumeSlider.value = SystemVolumePlugin.GetVolume() * 100;
 
-        //For test purposes
-        Genre.InitializeCollections();
-        Collection.InitializeCollections();
-
         // gridNavigator.Initialize(Collection.collections);
         // gridNavigator.Initialize(Genre.collections);
         //gridNavigator.Initialize(Game.onePlayer_games, this);
@@ -134,6 +141,10 @@ public class SC_LauncherControler : MonoBehaviour
         // gridNavigator.Initialize(Game.twoPlayer_games, this);
         // gridNavigator.Initialize(Genre.GetGames("Arcade"), this);
         //gridNavigator.Initialize(Collection.GetGames("Jeux sous le sapin 2021"), this);
+        // List<Item> searchItems =
+
+        gridNavigator.Initialize(games);
+        search_gridNavigator.Initialize(searchList);
 
     }
 
@@ -186,7 +197,7 @@ public class SC_LauncherControler : MonoBehaviour
     static Item getCurrentItem()
     {
         if (isInMainDisplay) return games[currentGameIndex];
-        else return instance.gridNavigator.getCurrentItem();
+        else return gridNavigator.getCurrentItem();
     }
 
     #region navigation
@@ -353,12 +364,13 @@ public class SC_LauncherControler : MonoBehaviour
         ExitInfo();
         if (isInMainDisplay)
         {
-            mainLayout.SetActive(false);
-            gridPage.SetActive(true);
+            // mainLayout.SetActive(false);
+            // gridPage.SetActive(true);
             isInMainDisplay = false;
+            GridEvent.DisplayGridPanel();
 
-            //gridNavigator.Initialize(games);
-            gridNavigator.Initialize(MetaCollection.metaCollections);
+            //searchManager.gameObject.SetActive(true);
+            //gridNavigator.Initialize(MetaCollection.metaCollections);
 
         }
         else gridNavigator.OnDown();
@@ -434,13 +446,20 @@ public class SC_LauncherControler : MonoBehaviour
     {
         instance.controls.Disable();
         instance.ShowGameStartedMessage(game.name);
-        instance.process = Process.Start(game.pathToExe);
-        //bg.color = Color.red;
-        instance.process.WaitForInputIdle();
-        //bg.color = Color.green;
+        process = Process.Start(game.pathToExe);
+        instance.bg.color = Color.red;
+        //process.WaitForInputIdle();
+
+        IntPtr handle = process.MainWindowHandle;
+        if (handle != IntPtr.Zero)
+        {
+            SetWindowPos(handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+        }
+
+        instance.bg.color = Color.green;
         //SetForegroundWindow(process.MainWindowHandle);
         //SetForegroundWindow(launcherWindow);
-        instance.StartCoroutine("TrySetForeground");
+        //instance.StartCoroutine("TrySetForeground");
         //try using method every few seconds in coroutine until unfocus
     }
 

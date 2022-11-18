@@ -6,6 +6,7 @@ public class Collection : Item
 {
     public List<Item> games = new List<Item>();
     public static List<Item> collections = new List<Item>();
+    public static List<Item> nbJoueurCollections = new List<Item>();
     public static List<string> collectionNames = new List<string>();
     public static Dictionary<string, List<Game>> dictionary = new Dictionary<string, List<Game>>(); //for testing
 
@@ -17,6 +18,17 @@ public class Collection : Item
 
         string pathToImage = SC_LauncherModel.pathToGames + SC_LauncherModel.metaFolder + name + ".png";
         loadImage(pathToImage);
+    }
+
+    public Collection(List<Item> games, string collection)
+    {
+        this.name = collection;
+        this.games = games;
+
+        string pathToImage = SC_LauncherModel.pathToGames + SC_LauncherModel.metaFolder + name + ".png";
+        loadImage(pathToImage);
+
+        nbJoueurCollections.Add(this);
     }
 
 
@@ -69,7 +81,7 @@ public class Collection : Item
 
     public override void OnEnter()
     {
-        SC_LauncherControler.instance.gridNavigator.Initialize(games);
+        SC_LauncherControler.gridNavigator.Initialize(games);
     }
 
     public static void OnCollectionsLoaded()

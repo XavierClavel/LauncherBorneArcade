@@ -79,8 +79,12 @@ public class Game : Item
 
     public static void OnGamesLoaded()
     {
-        new MetaCollection("1 Player", onePlayer_games);
-        new MetaCollection("2 Players", onePlayer_games);
+        new ChoiceUniqueSelectable("1 Player", onePlayer_games);
+        new ChoiceUniqueSelectable("2 Players", twoPlayer_games);
+
+        // new MetaCollection("1 Player", onePlayer_games);
+        // new MetaCollection("2 Players", onePlayer_games);
+        // new ChoiceUniqueSelectable("1|2 Players", SC_LauncherControler.games);
     }
 
 

@@ -1,10 +1,21 @@
 using UnityEngine.Video;
 using System.Reflection;
 using UnityEngine;
+using UnityEngine.Events;
 using System.Collections.Generic;
 
 public static class Extensions
 {
+
+    public static bool isEmpty(this UnityEvent value)
+    {
+        for (int i = 0; i < value.GetPersistentEventCount(); i++)
+        {
+            if (value.GetPersistentTarget(i) != null) return false;
+        }
+        return true;
+    }
+
     public static string GetStrBetweenTag(this string value, string tag)
     {
         if (value.Contains(tag))
