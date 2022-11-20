@@ -144,7 +144,8 @@ public class SC_LauncherControler : MonoBehaviour
         // List<Item> searchItems =
 
         gridNavigator.Initialize(games);
-        search_gridNavigator.Initialize(searchList);
+        // search_gridNavigator.Initialize(searchList);
+        SearchManager.Initialize();
 
     }
 

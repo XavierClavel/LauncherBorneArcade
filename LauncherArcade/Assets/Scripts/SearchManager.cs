@@ -1,34 +1,56 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
 
 public class SearchManager : MonoBehaviour
 {
-    [SerializeField] GridNavigator nbJoueursGrid;
-    [SerializeField] GridNavigator genreGrid;
-    [SerializeField] GridNavigator searchButtonGrid;
     static SearchManager instance;
+    [SerializeField] Sprite sprite_validate;
+    [SerializeField] Sprite sprite_cancel;
+    [SerializeField] List<GameObject> tiles;
+    [SerializeField] List<Image> tilesImage;
+    [SerializeField] List<TextMeshProUGUI> tilesName;
+    [SerializeField] List<Image> tilesStatusImage;
+    public static List<Item> searchItems = new List<Item>();
+    [SerializeField] GridNavigator gridNavigator;
 
-    private void OnEnable()
+
+    private void Awake()
     {
         instance = this;
-        nbJoueursGrid.Initialize(ChoiceUniqueSelectable.choices);
-        genreGrid.Initialize(ChoiceMultiSelectable.choices);
 
-        SC_LauncherControler.gridNavigator = nbJoueursGrid;
-        nbJoueursGrid.Activate();
     }
 
-    public void InitializeDisplay()
+    public static void Initialize()
     {
-        instance = this;
-        genreGrid.Initialize(Genre.collections);
+        LinkValues();
+        instance.gridNavigator.LinkValues(instance.tiles, searchItems);
+        ChoiceMultiSelectable.status_yes = instance.sprite_validate;
+        ChoiceMultiSelectable.status_no = instance.sprite_cancel;
+    }
+
+
+    public static void LinkValues()
+    {
+        for (int i = 0; i < 4; i++)
+        {
+            instance.tilesImage[i].sprite = searchItems[i].image;
+            instance.tilesName[i].text = searchItems[i].name;
+        }
+        for (int i = 0; i < 2; i++)
+        {
+            ChoiceMultiSelectable choice = (ChoiceMultiSelectable)searchItems[i];
+            choice.spriteStatus = instance.tilesStatusImage[i];
+        }
     }
 
     public static void OnSearch()
     {
+        Debug.Log("searching");
         List<Item> genreItems = ChoiceMultiSelectable.SearchGenre();
-        List<Item> nbJoueursItems = ChoiceUniqueSelectable.SearchNbJoueurs();
+        List<Item> nbJoueursItems = ChoicePlayers.SearchGenre();
         List<Item> searchResults = new List<Item>();
         foreach (Item item in nbJoueursItems)
         {
@@ -40,12 +62,13 @@ public class SearchManager : MonoBehaviour
         if (searchResults.Count == 0) OnNoResult();
         else
         {
-            SC_LauncherControler.gridNavigator.Initialize(searchResults);
+            GridNavigator.mainGridDisplay.Initialize(searchResults);
         }
     }
 
     static void OnNoResult()
     {
+        Debug.Log("no result");
         //Display message
     }
 }

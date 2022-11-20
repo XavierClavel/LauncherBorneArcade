@@ -74,8 +74,10 @@ public class SC_LauncherModel
 
     public void OnGamesLoaded()
     {
+        Game.OnGamesLoaded();
         Genre.OnGenresLoaded();
         Collection.OnCollectionsLoaded();
-        Game.OnGamesLoaded();
+        ChoiceMultiSelectable.selectedGames = SC_LauncherControler.games;
+        ChoiceUniqueSelectable.selectedItems = SC_LauncherControler.games;
     }
 }

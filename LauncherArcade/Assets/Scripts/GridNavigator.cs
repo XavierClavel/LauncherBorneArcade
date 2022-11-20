@@ -41,15 +41,7 @@ public class GridNavigator : MonoBehaviour
     public static SC_LauncherControler launcherControler;
     [SerializeField] UnityEvent onLeft;
     [SerializeField] UnityEvent onRight;
-
-    private void OnEnable()
-    {
-        // UnityEngine.Debug.Log(gridTiles.Count);
-        // currentGridIndex = 0;
-        // UnityEngine.Debug.Log(gridTiles[currentGridIndex].activeSelf);
-        // gridTiles[currentGridIndex].GetComponent<Animator>().SetBool("Highlighted", true);
-        // nbLinesAbsorbed = 0;
-    }
+    public static GridNavigator mainGridDisplay;
 
     public static void SwitchActiveGridNavigator(GridNavigator newGridNavigator)
     {
@@ -98,6 +90,13 @@ public class GridNavigator : MonoBehaviour
         nbLines = nbGames % nbColumns == 0 ? nbGames / nbColumns : nbGames / nbColumns + 1;
         UnityEngine.Debug.Log(nbGames);
         Activate();
+    }
+
+    public void LinkValues(List<GameObject> tiles, List<Item> items)
+    {
+        this.items = items;
+        gridTiles = tiles;
+        nbGames = gridTiles.Count;
     }
 
     public void Activate()

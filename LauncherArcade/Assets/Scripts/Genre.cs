@@ -50,9 +50,10 @@ public class Genre : Item
     public static void OnGenresLoaded()
     {
         new MetaCollection("Genres", collections);
+        new ChoiceGenre("Genres", collections);
         foreach (Genre genre in collections)
         {
-            new ChoiceMultiSelectable(genre.name, genre.games);
+            // new ChoiceMultiSelectable(genre.name, genre.games);
         }
     }
 

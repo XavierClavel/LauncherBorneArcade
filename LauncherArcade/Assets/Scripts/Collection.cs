@@ -86,7 +86,8 @@ public class Collection : Item
 
     public static void OnCollectionsLoaded()
     {
-        new MetaCollection("Collections", collections);
+        // new MetaCollection("Collections", collections);
+        new ChoiceGenre("Collections", collections);
     }
 
 }
