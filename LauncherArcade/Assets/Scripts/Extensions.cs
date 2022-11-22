@@ -7,6 +7,19 @@ using System.Collections.Generic;
 public static class Extensions
 {
 
+    public static List<Item> Union(List<Item> list1, List<Item> list2)
+    {
+        List<Item> result = new List<Item>();
+        foreach (Item item in list1)
+        {
+            if (list2.Contains(item))
+            {
+                result.Add(item);
+            }
+        }
+        return result;
+    }
+
     public static bool isEmpty(this UnityEvent value)
     {
         for (int i = 0; i < value.GetPersistentEventCount(); i++)

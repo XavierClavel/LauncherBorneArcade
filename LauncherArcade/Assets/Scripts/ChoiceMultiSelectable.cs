@@ -36,6 +36,7 @@ public class ChoiceMultiSelectable : Item
 
     public static List<Item> SearchGenre()
     {
+        selectedGames = new List<Item>();
         foreach (ChoiceMultiSelectable choice in choices)
         {
             choice.OnSearch();

@@ -8,6 +8,7 @@ public class GridEvent : MonoBehaviour
     [SerializeField] RectTransform gridLayout;
     [SerializeField] RectTransform canvas;
     [SerializeField] RectTransform searchPanel;
+    [SerializeField] RectTransform extendedSearchPanel;
 
     [SerializeField] RectTransform toGridArrow;
     [SerializeField] RectTransform toMenuArrow;
@@ -22,6 +23,16 @@ public class GridEvent : MonoBehaviour
         toMenuArrow.anchoredPosition = new Vector2(0f, 630f);
         GridNavigator.mainGridDisplay = gridNavigator;
     }
+
+    public static void SwitchActiveGridNavigator(GridNavigator newGridNavigator)
+    {
+        GridNavigator oldGridNavigator = SC_LauncherControler.gridNavigator;
+        oldGridNavigator.StopAnimating();
+        SC_LauncherControler.gridNavigator = newGridNavigator;
+        newGridNavigator.StartAnimating();
+
+    }
+
     public static void DisplayGridPanel()
     {
         Sequence seq = DOTween.Sequence();
@@ -31,6 +42,7 @@ public class GridEvent : MonoBehaviour
     }
     public static void DisplayMainPanel()
     {
+        SC_LauncherControler.isInMainDisplay = true;
         Sequence seq = DOTween.Sequence();
         seq.Append(instance.searchPanel.DOAnchorPosX(-1300f, 0.25f));   //retract search panel
         seq.Append(instance.toMenuArrow.DOAnchorPosY(630f, 0.25f).OnComplete(HideMenuArrow));
@@ -50,15 +62,23 @@ public class GridEvent : MonoBehaviour
     public void DisplaySearchPanel()
     {
         gridLayout.DOAnchorPosX(450f, 0.5f);
-        GridNavigator.SwitchActiveGridNavigator(search_gridNavigator);
+        GridEvent.SwitchActiveGridNavigator(search_gridNavigator);
     }
 
     public void HideSearchPanel()
     {
         gridLayout.DOAnchorPosX(0f, 0.5f);
-        GridNavigator.SwitchActiveGridNavigator(gridNavigator);
+        GridEvent.SwitchActiveGridNavigator(gridNavigator);
     }
 
+
     public void DisplayExtendedSearchPanel()
-    { }
+    {
+        extendedSearchPanel.DOAnchorPosX(-450f, 0.75f);
+    }
+
+    public void HideExtendedSearchPanel()
+    {
+        extendedSearchPanel.DOAnchorPosX(-2700f, 0.75f);
+    }
 }

@@ -2,19 +2,22 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Genre : Item
+public class Genre : ChoiceMultiSelectable
 {
     public List<Item> games = new List<Item>();
-    public static List<Item> collections = new List<Item>();
+    public static List<Item> choices = new List<Item>();
     public static List<string> genres = new List<string>();
 
     public Genre(Game game)
     {
+        Debug.Log("new genre");
         this.name = game.controlsInfo.genre;
         this.games.Add(game);
 
         string pathToImage = SC_LauncherModel.pathToGames + SC_LauncherModel.metaFolder + name + ".png";
         loadImage(pathToImage);
+
+        choices.Add(this);
 
     }
 
@@ -27,14 +30,15 @@ public class Genre : Item
         if (Exists(genre))
         {
             int index = genres.IndexOf(genre);
-            Genre relevantGenre = (Genre)collections[index];
+            Genre relevantGenre = (Genre)choices[index];
             relevantGenre.games.Add(game);
         }
         else
         {
             genres.Add(genre);
-            collections.Add(new Genre(game));
-            collections.Add(new Genre(game)); collections.Add(new Genre(game)); collections.Add(new Genre(game)); collections.Add(new Genre(game)); collections.Add(new Genre(game)); collections.Add(new Genre(game)); collections.Add(new Genre(game));
+            new Genre(game);
+            // choices.Add(new Genre(game));
+            // choices.Add(new Genre(game)); choices.Add(new Genre(game)); choices.Add(new Genre(game)); choices.Add(new Genre(game)); choices.Add(new Genre(game)); choices.Add(new Genre(game)); choices.Add(new Genre(game));
         }
     }
     public static bool Exists(string genre)
@@ -42,19 +46,34 @@ public class Genre : Item
         return genres.Contains(genre);
     }
 
-    public override void OnEnter()
+    public static List<Item> SearchGenre()
     {
-        SC_LauncherControler.gridNavigator.Initialize(games);
+        selectedGames = new List<Item>();
+        foreach (Genre choice in choices)
+        {
+            choice.OnSearch();
+        }
+        return selectedGames;
     }
+
+    public void OnSearch()
+    {
+        if (!selected) return;
+
+        foreach (Item game in games)
+        {
+            if (!selectedGames.Contains(game))  //check to support games in multiple genres
+            {
+                selectedGames.Add(game);
+            }
+        }
+    }
+
 
     public static void OnGenresLoaded()
     {
-        new MetaCollection("Genres", collections);
-        new ChoiceGenre("Genres", collections);
-        foreach (Genre genre in collections)
-        {
-            // new ChoiceMultiSelectable(genre.name, genre.games);
-        }
+        new MetaCollection("Genres", choices);
+        // new ChoiceGenre("Genres", collections);
     }
 
 }

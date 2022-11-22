@@ -14,7 +14,16 @@ public class ChoiceGenre : ChoiceMultiSelectable
         loadImage(pathToImage);
 
         choices.Add(this);
-        SearchManager.searchItems.Add(this);
+        // SearchManager.searchItems.Add(this);
+    }
+
+    public override void OnEnter()
+    {
+        // base.OnEnter();
+        Debug.Log("enter");
+
+        GridEvent.instance.DisplayExtendedSearchPanel();
+        GridEvent.SwitchActiveGridNavigator(SC_LauncherControler.instance.genreNavigator);
     }
 
 }

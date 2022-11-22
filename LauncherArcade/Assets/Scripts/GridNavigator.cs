@@ -25,13 +25,6 @@ public class GridNavigator : MonoBehaviour
 
     [SerializeField] List<GameObject> showOnTop;
     [SerializeField] List<GameObject> hideOnTop;
-    //[SerializeField] GameObject switchTo_OnRight;
-    //[SerializeField] GameObject switchTo_OnLeft;
-
-    [SerializeField] GridNavigator switchTo_GridNavigator_OnTop;
-    [SerializeField] GridNavigator switchTo_GridNavigator_OnBottom;
-    [SerializeField] GameObject switchTo_Window_OnTop;
-    [SerializeField] GameObject switchTo_OnBottom;
     IntPtr launcherWindow;
     int nbLinesToAbsorb = 2;
     int nbLinesAbsorbed = 0;
@@ -39,18 +32,12 @@ public class GridNavigator : MonoBehaviour
     int currentLine = 1;
 
     public static SC_LauncherControler launcherControler;
+    [Header("Direction Events")]
+    [SerializeField] UnityEvent onTop;
     [SerializeField] UnityEvent onLeft;
     [SerializeField] UnityEvent onRight;
     public static GridNavigator mainGridDisplay;
-
-    public static void SwitchActiveGridNavigator(GridNavigator newGridNavigator)
-    {
-        GridNavigator oldGridNavigator = SC_LauncherControler.gridNavigator;
-        oldGridNavigator.StopAnimating();
-        SC_LauncherControler.gridNavigator = newGridNavigator;
-        newGridNavigator.StartAnimating();
-
-    }
+    public List<Image> statusIcons = new List<Image>();
 
     public void Initialize(List<Item> items)
     {
@@ -80,6 +67,14 @@ public class GridNavigator : MonoBehaviour
 
             gridTile.GetComponent<Image>().sprite = item.image;
             gridTile.GetComponentInChildren<TextMeshProUGUI>().text = item.name;
+
+            Image[] images = gridTile.GetComponentsInChildren<Image>();
+            if (images.Length == 2)
+            {
+                UnityEngine.Debug.Log("sprite status icon");
+                ChoiceMultiSelectable choice = (ChoiceMultiSelectable)item;
+                choice.spriteStatus = images[1];
+            }
             gridTile.SetActive(true);
 
             gridTiles.Add(gridTile);
@@ -131,13 +126,7 @@ public class GridNavigator : MonoBehaviour
 
         if (currentGridIndex != 0 && currentGridIndex % nbColumns == nbColumns - 1)
         {
-            UnityEngine.Debug.Log(onRight.isEmpty());
-            if (!onRight.isEmpty())
-            {
-                onRight.Invoke();
-                UnityEngine.Debug.Log("not null");
-                return;
-            }
+            onRight.Invoke();
             if (currentGridIndex == nbGames - 1) return;
 
             if (nbLinesAbsorbed == nbLinesToAbsorb) gridTransform.anchoredPosition += 300 * Vector2.up;
@@ -166,7 +155,7 @@ public class GridNavigator : MonoBehaviour
                     foreach (GameObject go in hideOnTop) go.SetActive(false);
                 }
             }
-            nbLinesDisplay.text = currentLine + "/" + nbLines;
+            if (nbLinesDisplay != null) nbLinesDisplay.text = currentLine + "/" + nbLines;
             if (nbLinesAbsorbed == 0) gridTransform.anchoredPosition -= 300 * Vector2.up;
             else nbLinesAbsorbed--;
         }
@@ -174,20 +163,21 @@ public class GridNavigator : MonoBehaviour
 
     void OnTop()
     {
-        if (switchTo_GridNavigator_OnTop != null)
-        {
-            gridTiles[currentGridIndex].GetComponent<Animator>().SetTrigger("Normal");
-            SC_LauncherControler.gridNavigator = switchTo_GridNavigator_OnTop;
-            switchTo_GridNavigator_OnTop.Activate();
-            gridPage.GetComponent<RectTransform>().anchoredPosition -= 300 * Vector2.up;
-        }
-        else
-        {
-            // gridPage.SetActive(false);
-            // mainLayout.SetActive(true);
-            GridEvent.DisplayMainPanel();
-            SC_LauncherControler.isInMainDisplay = true;
-        }
+        onTop.Invoke();
+        // if (switchTo_GridNavigator_OnTop != null)
+        // {
+        //     gridTiles[currentGridIndex].GetComponent<Animator>().SetTrigger("Normal");
+        //     SC_LauncherControler.gridNavigator = switchTo_GridNavigator_OnTop;
+        //     switchTo_GridNavigator_OnTop.Activate();
+        //     gridPage.GetComponent<RectTransform>().anchoredPosition -= 300 * Vector2.up;
+        // }
+        // else
+        // {
+        //     // gridPage.SetActive(false);
+        //     // mainLayout.SetActive(true);
+        //     GridEvent.DisplayMainPanel();
+        //     SC_LauncherControler.isInMainDisplay = true;
+        // }
     }
 
     public void OnDown()
@@ -205,7 +195,7 @@ public class GridNavigator : MonoBehaviour
             foreach (GameObject go in hideOnTop) go.SetActive(true);
         }
         currentLine++;
-        nbLinesDisplay.text = currentLine + "/" + nbLines;
+        if (nbLinesDisplay != null) nbLinesDisplay.text = currentLine + "/" + nbLines;
         Animate();
         if (nbLinesAbsorbed == nbLinesToAbsorb) gridTransform.anchoredPosition += 300 * Vector2.up;
         else nbLinesAbsorbed++;
@@ -213,13 +203,13 @@ public class GridNavigator : MonoBehaviour
 
     void OnBottom()
     {
-        if (switchTo_GridNavigator_OnBottom != null)
-        {
-            gridTiles[currentGridIndex].GetComponent<Animator>().SetTrigger("Normal");
-            SC_LauncherControler.gridNavigator = switchTo_GridNavigator_OnBottom;
-            switchTo_GridNavigator_OnBottom.Activate();
-            gridPage.GetComponent<RectTransform>().anchoredPosition += 300 * Vector2.up;
-        }
+        // if (switchTo_GridNavigator_OnBottom != null)
+        // {
+        //     gridTiles[currentGridIndex].GetComponent<Animator>().SetTrigger("Normal");
+        //     SC_LauncherControler.gridNavigator = switchTo_GridNavigator_OnBottom;
+        //     switchTo_GridNavigator_OnBottom.Activate();
+        //     gridPage.GetComponent<RectTransform>().anchoredPosition += 300 * Vector2.up;
+        // }
     }
 
     #endregion

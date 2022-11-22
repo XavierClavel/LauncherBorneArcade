@@ -23,7 +23,6 @@ public class ChoiceUniqueSelectable : Item
         loadImage(pathToImage);
 
         // choices.Add(this);
-        SC_LauncherControler.searchList.Add(this);
         SearchManager.searchItems.Add(this);
     }
 

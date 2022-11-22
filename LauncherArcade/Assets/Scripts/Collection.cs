@@ -65,20 +65,6 @@ public class Collection : Item
         return collectionNames.Contains(genre);
     }
 
-    public static void InitializeCollections()
-    {
-        // foreach (Collection collection in collections)
-        // {
-        //     dictionary[collection.name] = (List<Game>) collection.games;
-        // }
-    }
-
-    public static List<Game> GetGames(string collection)
-    {
-        if (!Exists(collection)) return null;
-        return dictionary[collection];
-    }
-
     public override void OnEnter()
     {
         SC_LauncherControler.gridNavigator.Initialize(games);
@@ -86,8 +72,9 @@ public class Collection : Item
 
     public static void OnCollectionsLoaded()
     {
+        new MetaCollection("Collections", collections);
         // new MetaCollection("Collections", collections);
-        new ChoiceGenre("Collections", collections);
+        // new ChoiceGenre("Collections", collections);
     }
 
 }

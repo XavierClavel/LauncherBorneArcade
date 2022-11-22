@@ -51,23 +51,24 @@ public class SC_LauncherControler : MonoBehaviour
     public static SC_LauncherControler instance;
     public static state currentState = state.mainDisplay;
     [SerializeField] SearchManager searchManager;
-    public static List<Item> searchList = new List<Item>();
+    [Header("Grid Layouts")]
     [SerializeField] GridNavigator search_gridNavigator;
+    public GridNavigator genreNavigator;
 
 
     #region DLLs
-    [DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr hWnd);
+    //[DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr hWnd);
 
-    [DllImport("user32.dll")] static extern IntPtr GetActiveWindow();
+    //[DllImport("user32.dll")] static extern IntPtr GetActiveWindow();
 
-    [DllImport("user32.dll", EntryPoint = "SetWindowPos")] public static extern IntPtr SetWindowPos(IntPtr hWnd, int hWndInsertAfter, int x, int Y, int cx, int cy, int wFlags);
-    const int HWND_TOPMOST = -1;
-    const int SWP_NOMOVE = 0x0002;
-    const int SWP_NOSIZE = 0x0001;
+    //[DllImport("user32.dll", EntryPoint = "SetWindowPos")] public static extern IntPtr SetWindowPos(IntPtr hWnd, int hWndInsertAfter, int x, int Y, int cx, int cy, int wFlags);
+    //const int HWND_TOPMOST = -1;
+    //const int SWP_NOMOVE = 0x0002;
+    //const int SWP_NOSIZE = 0x0001;
 
-    [DllImport("user32.dll", SetLastError = true)]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    static extern bool LockSetForegroundWindow(uint uLockCode);
+    //[DllImport("user32.dll", SetLastError = true)]
+    //[return: MarshalAs(UnmanagedType.Bool)]
+    //static extern bool LockSetForegroundWindow(uint uLockCode);
 
     #endregion
 
@@ -80,7 +81,7 @@ public class SC_LauncherControler : MonoBehaviour
         gridNavigator = instance.mainGridNavigator;
         GridNavigator.launcherControler = this;
 
-        launcherWindow = GetActiveWindow();
+        //launcherWindow = GetActiveWindow();
 
         Application.runInBackground = false;
         Application.targetFrameRate = -1; //laisser la possibilité de faire du 144Hz
@@ -144,8 +145,9 @@ public class SC_LauncherControler : MonoBehaviour
         // List<Item> searchItems =
 
         gridNavigator.Initialize(games);
-        // search_gridNavigator.Initialize(searchList);
         SearchManager.Initialize();
+        UnityEngine.Debug.Log("amount of genres : " + Genre.choices.Count);
+        genreNavigator.Initialize(Genre.choices);
 
     }
 
@@ -448,16 +450,16 @@ public class SC_LauncherControler : MonoBehaviour
         instance.controls.Disable();
         instance.ShowGameStartedMessage(game.name);
         process = Process.Start(game.pathToExe);
-        instance.bg.color = Color.red;
+        //instance.bg.color = Color.red;
         //process.WaitForInputIdle();
 
-        IntPtr handle = process.MainWindowHandle;
+        /*IntPtr handle = process.MainWindowHandle;
         if (handle != IntPtr.Zero)
         {
             SetWindowPos(handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
         }
 
-        instance.bg.color = Color.green;
+        instance.bg.color = Color.green;*/
         //SetForegroundWindow(process.MainWindowHandle);
         //SetForegroundWindow(launcherWindow);
         //instance.StartCoroutine("TrySetForeground");

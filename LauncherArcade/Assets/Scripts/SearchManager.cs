@@ -34,6 +34,9 @@ public class SearchManager : MonoBehaviour
 
     public static void LinkValues()
     {
+        Debug.Log(searchItems.Count);
+        Debug.Log(searchItems[0].name);
+        Debug.Log(searchItems[1].name);
         for (int i = 0; i < 4; i++)
         {
             instance.tilesImage[i].sprite = searchItems[i].image;
@@ -46,19 +49,14 @@ public class SearchManager : MonoBehaviour
         }
     }
 
+
     public static void OnSearch()
     {
         Debug.Log("searching");
-        List<Item> genreItems = ChoiceMultiSelectable.SearchGenre();
+        List<Item> genreItems = Genre.SearchGenre();
         List<Item> nbJoueursItems = ChoicePlayers.SearchGenre();
         List<Item> searchResults = new List<Item>();
-        foreach (Item item in nbJoueursItems)
-        {
-            if (genreItems.Contains(item))
-            {
-                searchResults.Add(item);
-            }
-        }
+        searchResults = Extensions.Union(nbJoueursItems, genreItems);
         if (searchResults.Count == 0) OnNoResult();
         else
         {
