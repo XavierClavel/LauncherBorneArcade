@@ -11,6 +11,7 @@ using System;
 using Plugins.SystemVolumePlugin;
 using System.Runtime.InteropServices;
 using UnityEngine.Video;
+using System.Threading;
 
 public enum state { mainDisplay, games, collections }
 
@@ -59,31 +60,58 @@ public class SC_LauncherControler : MonoBehaviour
     #region DLLs
     //[DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr hWnd);
 
-    //[DllImport("user32.dll")] static extern IntPtr GetActiveWindow();
+    [DllImport("user32.dll")] static extern IntPtr GetActiveWindow();
 
-    //[DllImport("user32.dll", EntryPoint = "SetWindowPos")] public static extern IntPtr SetWindowPos(IntPtr hWnd, int hWndInsertAfter, int x, int Y, int cx, int cy, int wFlags);
-    //const int HWND_TOPMOST = -1;
-    //const int SWP_NOMOVE = 0x0002;
-    //const int SWP_NOSIZE = 0x0001;
+    [DllImport("user32.dll")] static extern IntPtr SetActiveWindow(IntPtr hWnd);
+    [DllImport("user32.dll", EntryPoint = "SetWindowPos")] public static extern IntPtr SetWindowPos(IntPtr hWnd, int hWndInsertAfter, int x, int Y, int cx, int cy, int wFlags);
+    [DllImport("user32.dll")] public static extern bool GetWindowPlacement(IntPtr hWnd, out WindowPlacement lpwndpl);
+
+    [Serializable]
+    [StructLayout(LayoutKind.Sequential)]
+    public struct WindowPlacement
+    {
+        public int length;
+        public int flags;
+        public ShowWindowCommands showCmd;
+        public System.Drawing.Point ptMinPosition;
+        public System.Drawing.Point ptMaxPosition;
+        public System.Drawing.Rectangle rcNormalPosition;
+    }
+
+    public enum ShowWindowCommands : int
+    {
+        Hide = 0,
+        Normal = 1,
+        Minimized = 2,
+        Maximized = 3,
+    }
+
+    const int HWND_TOPMOST = -1;
+    const int SWP_NOMOVE = 0x0002;
+    const int SWP_NOSIZE = 0x0001;
 
     //[DllImport("user32.dll", SetLastError = true)]
     //[return: MarshalAs(UnmanagedType.Bool)]
     //static extern bool LockSetForegroundWindow(uint uLockCode);
+    [DllImport("user32.dll")]
+    private static extern bool ShowWindow(IntPtr hwnd, int nCmdShow);
+    static IntPtr launcherHandle;
 
     #endregion
 
     void Awake()
     {
+        Application.runInBackground = true;
+        Cursor.visible = false;
         //LockSetForegroundWindow(1); //prevent app from putting itself in foreground
         //try SetWinEventHook if it does not work
+        launcherHandle = GetActiveWindow();
+        //SetWindowPos(launcherHandle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
 
         instance = this;
         gridNavigator = instance.mainGridNavigator;
         GridNavigator.launcherControler = this;
 
-        //launcherWindow = GetActiveWindow();
-
-        Application.runInBackground = false;
         Application.targetFrameRate = -1; //laisser la possibilité de faire du 144Hz
 
         controls = new Controls();
@@ -444,20 +472,33 @@ public class SC_LauncherControler : MonoBehaviour
 
     #endregion
 
+    static Thread t;
+
+    public static Game gameToLaunch;
+
     // Launch the game (at the current game index) in the main emplacement 
     public static void LaunchGame(Game game)
     {
         instance.controls.Disable();
         instance.ShowGameStartedMessage(game.name);
-        process = Process.Start(game.pathToExe);
+        //ShowWindow(launcherHandle, 2);
+
+        gameToLaunch = game;
+
+        t = new Thread(test);
+        t.Start();
+        //instance.StartCoroutine("TrySetForeground");
+
         //instance.bg.color = Color.red;
         //process.WaitForInputIdle();
 
-        /*IntPtr handle = process.MainWindowHandle;
+        /*
+        IntPtr handle = process.MainWindowHandle;
         if (handle != IntPtr.Zero)
         {
             SetWindowPos(handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
         }
+        /*
 
         instance.bg.color = Color.green;*/
         //SetForegroundWindow(process.MainWindowHandle);
@@ -466,24 +507,251 @@ public class SC_LauncherControler : MonoBehaviour
         //try using method every few seconds in coroutine until unfocus
     }
 
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static extern bool ShowWindow(IntPtr hWnd, ShowWindowEnum flags);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern int SetForegroundWindow(IntPtr hwnd);
+
+    private enum ShowWindowEnum
+    {
+        Hide = 0,
+        ShowNormal = 1, ShowMinimized = 2, ShowMaximized = 3,
+        Maximize = 3, ShowNormalNoActivate = 4, Show = 5,
+        Minimize = 6, ShowMinNoActivate = 7, ShowNoActivate = 8,
+        Restore = 9, ShowDefault = 10, ForceMinimized = 11
+    };
+
+    public static void BringMainWindowToFront(Process bProcess)
+    {
+
+        // check if the process is running
+        if (bProcess != null)
+        {
+            // check if the window is hidden / minimized
+            if (bProcess.MainWindowHandle == IntPtr.Zero)
+            {
+                // the window is hidden so try to restore it before setting focus.
+                ShowWindow(bProcess.Handle, ShowWindowEnum.Restore);
+            }
+
+            // set user the focus to the window
+            SetForegroundWindow(bProcess.MainWindowHandle);
+        }
+        else
+        {
+            // the process is not running, so start it
+            bProcess.Start();
+        }
+    }
+
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr GetForegroundWindow();
+
+    [DllImport("kernel32.dll")]
+    public static extern uint GetCurrentThreadId();
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+    [DllImport("user32.dll")]
+    public static extern bool AttachThreadInput(uint idAttach, uint idAttachTo, bool fAttach);
+
+    public static void SwitchWindow(IntPtr windowHandle)
+    {
+        if (GetForegroundWindow() == windowHandle)
+            return;
+
+        IntPtr foregroundWindowHandle = GetForegroundWindow();
+        uint currentThreadId = GetCurrentThreadId();
+        uint temp;
+        uint foregroundThreadId = GetWindowThreadProcessId(foregroundWindowHandle, out temp);
+        AttachThreadInput(currentThreadId, foregroundThreadId, true);
+        SetForegroundWindow(windowHandle);
+        AttachThreadInput(currentThreadId, foregroundThreadId, false);
+
+        while (GetForegroundWindow() != windowHandle)
+        {
+        }
+    }
+
+    private const uint WS_MINIMIZE = 0x20000000;
+
+    private const uint SW_SHOW = 0x05;
+    private const uint SW_MINIMIZE = 0x06;
+    private const uint SW_RESTORE = 0x09;
+
+    [DllImport("user32.dll", SetLastError = true)]
+    static extern bool BringWindowToTop(IntPtr hWnd);
+
+    [DllImport("user32.dll", EntryPoint = "GetWindowLong")]
+    static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
+
+    public static void FocusWindow(IntPtr focusOnWindowHandle)
+    {
+        int style = GetWindowLong(focusOnWindowHandle, -16);
+
+        // Minimize and restore to be able to make it active.
+        if ((style & WS_MINIMIZE) == WS_MINIMIZE)
+        {
+            ShowWindow(focusOnWindowHandle, ShowWindowEnum.Restore);
+        }
+        uint outPtr;
+        uint currentlyFocusedWindowProcessId = GetWindowThreadProcessId(GetForegroundWindow(), out outPtr);
+        uint appThread = GetCurrentThreadId();
+
+        if (currentlyFocusedWindowProcessId != appThread)
+        {
+            AttachThreadInput(currentlyFocusedWindowProcessId, appThread, true);
+            BringWindowToTop(focusOnWindowHandle);
+            ShowWindow(focusOnWindowHandle, ShowWindowEnum.Show);
+            AttachThreadInput(currentlyFocusedWindowProcessId, appThread, false);
+        }
+
+        else
+        {
+            BringWindowToTop(focusOnWindowHandle);
+            ShowWindow(focusOnWindowHandle, ShowWindowEnum.Show);
+        }
+    }
+
+    //[DllImport("user32.dll", SetLastError = true)]
+    //[return: MarshalAs(UnmanagedType.Bool)]
+    //static extern bool SystemParametersInfo(SPI uiAction, uint uiParam, IntPtr pvParam, SPIF fWinIni)
+
+
+    /*
+        public static void ForceWindowIntoForeground(IntPtr window)
+    {
+        uint currentThread = GetCurrentThreadId();
+
+        IntPtr activeWindow = GetForegroundWindow();
+        uint activeProcess;
+        uint activeThread = GetWindowThreadProcessId(activeWindow, out activeProcess);
+
+        uint windowProcess;
+        uint windowThread = GetWindowThreadProcessId(window, out windowProcess);
+
+        if (currentThread != activeThread)
+            AttachThreadInput(currentThread, activeThread, true);
+        if (windowThread != currentThread)
+            AttachThreadInput(windowThread, currentThread, true);
+
+        uint oldTimeout = 0, newTimeout = 0;
+        SystemParametersInfo(0x2000, 0, ref oldTimeout, 0);
+        SystemParametersInfo(Win32.SPI_SETFOREGROUNDLOCKTIMEOUT, 0, ref newTimeout, 0);
+        LockSetForegroundWindow(2);
+        AllowSetForegroundWindow(Win32.ASFW_ANY);
+
+        SetForegroundWindow(window);
+        ShowWindow(window, 9);
+
+        SystemParametersInfo(SPI_SETFOREGROUNDLOCKTIMEOUT, 0, ref oldTimeout, 0);
+
+        if (currentThread != activeThread)
+            AttachThreadInput(currentThread, activeThread, false);
+        if (windowThread != currentThread)
+            AttachThreadInput(windowThread, currentThread, false);
+    }
+    */
+
+    //[DllImport("user32.dll")]
+    //private static extern int RegisterHotKey(IntPtr hWnd, int id, int modifier, Keys vk);
+    [DllImport("user32.dll")]
+    private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
+    public static void test()
+    {
+        //ShowWindow(launcherHandle, 8);
+        process = Process.Start(gameToLaunch.pathToExe);
+        process.WaitForInputIdle();
+        IntPtr handle = process.MainWindowHandle;
+
+        while (string.IsNullOrEmpty(process.MainWindowTitle))
+        {
+            System.Threading.Thread.Sleep(100);
+            process.Refresh();
+        }
+
+        Thread.Sleep(1000);
+
+        ShowWindow(handle, 3);
+        SetActiveWindow(handle);
+        Thread.Sleep(5000);
+        ShowWindow(launcherHandle, 6);
+        UnityEngine.Debug.Log("active window is game ? " + GetActiveWindow().Equals(handle).ToString());
+        UnityEngine.Debug.Log("active window is launcher ? " + GetActiveWindow().Equals(launcherHandle).ToString());
+        //SetForegroundWindow(handle);
+        //BringMainWindowToFront(process);
+        //SwitchWindow(handle);
+
+
+        /*
+        while (process != null && !process.HasExited)// && placement.showCmd == ShowWindowCommands.Hide)
+        {
+            //Thread.Sleep(5000);
+            Thread.Sleep(500);
+
+            SetForegroundWindow(handle);
+            //ShowWindow(handle, 3);
+            ShowWindow(launcherHandle, 6);
+            SetActiveWindow(handle);
+        }
+        */
+        process.WaitForExit();
+        //SetWindowPos(handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+        //ShowWindow(launcherHandle, 7);
+        //instance.bg.color = Color.magenta;
+        //SetActiveWindow(handle);
+        /*
+        while (!process.HasExited)// && placement.showCmd == ShowWindowCommands.Hide)
+        {
+            //ShowWindow(handle, 3);
+            //SetActiveWindow(handle);
+            //SetWindowPos(handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+            Thread.Sleep(500);
+        }
+        */
+        ShowWindow(launcherHandle, 3);
+
+    }
+
     IEnumerator TrySetForeground()
     {
         WaitForEndOfFrame waitFrame = new WaitForEndOfFrame();
         WaitForSeconds tryForegroundPeriod = new WaitForSeconds(5f);
         // yield return new WaitWhile(() => launcherWindow == GetActiveWindow());
 
-        bg.color = Color.green;
+        //bg.color = Color.green;
+        //yield return tryForegroundPeriod;
+        //t = new Thread(test);
+        //t.Start();
+        //ShowWindow(launcherHandle, 1);
         yield return new WaitWhile(() => process.Responding);
-        // while (!process.Responding)
-        // {
-        //     //bg.color = Color.magenta;
-        //     //SetForegroundWindow(process.MainWindowHandle);
-        //     SetForegroundWindow(launcherWindow);
-        //     yield return waitFrame;
-        //     //yield return tryForegroundPeriod
-        // }
-        bg.color = Color.blue;
+        IntPtr handle = process.MainWindowHandle;
+        if (handle != IntPtr.Zero)
+        {
+            SetWindowPos(handle, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+        }
+        ShowWindow(process.MainWindowHandle, 1);
+        //while (!process.Responding)
+        //{
+        //bg.color = Color.magenta;
+        //SetForegroundWindow(process.MainWindowHandle);
+        //SetForegroundWindow(launcherWindow);
+        //  yield return waitFrame;
+        //yield return tryForegroundPeriod
+        //}
+        //bg.color = Color.blue;
     }
+
+
+
+
+    #region stuff
 
     // Show the correct game depending on the currenGameIndex
     public void updateGamesPreviews(int currentGameIndex)
@@ -558,4 +826,6 @@ public class SC_LauncherControler : MonoBehaviour
         controls.Arcade.Disable();
         controls.Volume.Disable();
     }
+
+    #endregion
 }
