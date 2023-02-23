@@ -682,11 +682,13 @@ public class SC_LauncherControler : MonoBehaviour
         }
 
         Thread.Sleep(1000);
-
-        ShowWindow(handle, 3);
-        SetActiveWindow(handle);
+        if (!process.HasExited)
+        {
+            ShowWindow(handle, 3);
+            SetActiveWindow(handle);
+        }
         Thread.Sleep(5000);
-        ShowWindow(launcherHandle, 6);
+        if (!process.HasExited) ShowWindow(launcherHandle, 6);
         instance.HideGameStartedMessage();
         //SetForegroundWindow(handle);
         //BringMainWindowToFront(process);

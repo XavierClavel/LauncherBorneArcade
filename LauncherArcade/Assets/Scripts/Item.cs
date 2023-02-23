@@ -13,7 +13,7 @@ public class Item
     ///<summary>
     ///Gets executed when user presses Enter key.
     ///</summary>
-    virtual public void OnEnter()
+    public virtual void OnEnter()
     {
 
     }
