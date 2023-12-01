@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 
+///<summary>Stores the content of the controls.txt file.</summary>
 public class ControlsInfo
 {
     public string nb_joueurs;
@@ -24,6 +25,9 @@ public class ControlsInfo
     public string controls_R5;
     public string controls_R6;
 
+    ///<summary>
+    ///Constructor that takes as an argument the text content of the controls.txt file.
+    ///</summary>
     public ControlsInfo(string text)
     {
         nb_joueurs = text.GetStrBetweenTag("<nbJoueurs>");

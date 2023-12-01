@@ -15,6 +15,9 @@ using System.Threading;
 
 public enum state { mainDisplay, games, collections }
 
+///<summary>
+///Main class used to control the launcher
+///</summary>
 public class SC_LauncherControler : MonoBehaviour
 {
     public static string pathToGames;
@@ -40,9 +43,10 @@ public class SC_LauncherControler : MonoBehaviour
     [SerializeField] TextMeshProUGUI infoDescription;
     [SerializeField] GameObject volumeWindow;
     [SerializeField] Slider volumeSlider;
+    const float newsWindow = 5f;
     WaitForSeconds holdPeriod = new WaitForSeconds(0.07f);
     WaitForSeconds holdPeriodScroll = new WaitForSeconds(0.3f);
-    WaitForSeconds newsHold = new WaitForSeconds(5f);
+    WaitForSeconds newsHold = new WaitForSeconds(newsWindow);
     public Image bg;
     public static InfoController infoController;
     IntPtr launcherWindow;
@@ -190,6 +194,9 @@ public class SC_LauncherControler : MonoBehaviour
         else StartCoroutine("RotateNews", news);
     }
 
+    ///<summary>
+    ///Used to switch between news at the time interball defined by the newsWindow const
+    ///</summary>
     IEnumerator RotateNews(List<String> news)
     {
         int nbNews = news.Count;
@@ -205,28 +212,9 @@ public class SC_LauncherControler : MonoBehaviour
         }
     }
 
-
-    IEnumerator OnApplicationFocus(bool focusStatus)
-    {
-        //on utilise la méthode sous forme d'IEnumerator sinon elle est exécutée au début de la frame ce qui fait que le message "Game started"
-        //disparait pendant une frame avant le lancement du jeu, ce qui est visible
-
-        if (process == null) yield break;
-
-        if (focusStatus)    //game is closing
-        {
-            process = null;
-            controls.Enable();
-        }
-        else
-        {  //game is starting
-            //int nbNews = news.Count;
-            StopCoroutine("TrySetForeground");
-            HideGameStartedMessage();
-        }
-        yield return null;
-    }
-
+    ///<summary>
+    ///Returns the selected item.
+    ///</summary>
     static Item getCurrentItem()
     {
         if (isInMainDisplay) return games[currentGameIndex];
@@ -236,6 +224,10 @@ public class SC_LauncherControler : MonoBehaviour
     #region navigation
 
     // Gestion of controls
+
+    ///<summary>
+    ///Called on Enter key press.
+    ///</summary>
     public void OnEnter(InputAction.CallbackContext context)
     {
         ExitInfo();
@@ -243,11 +235,17 @@ public class SC_LauncherControler : MonoBehaviour
         getCurrentItem().OnEnter();
     }
 
+    ///<summary>
+    ///Called on Info key press.
+    ///</summary>
     public void OnInfo(InputAction.CallbackContext context)
     {
         getCurrentItem().OnInfo();
     }
 
+    ///<summary>
+    ///Displays info window for the selected game.
+    ///</summary>
     public static void DisplayInfo(Game game)
     {
         if (instance.infoWindow.activeInHierarchy)
@@ -276,6 +274,10 @@ public class SC_LauncherControler : MonoBehaviour
         infoWindow.SetActive(true);
     }
 
+
+    ///<summary>
+    ///Disables info window.
+    ///</summary>
     public void ExitInfo()
     {
         infoController.ResetVideoPlayer();
@@ -413,6 +415,9 @@ public class SC_LauncherControler : MonoBehaviour
 
     #region volume
 
+    ///<summary>
+    ///Called on Volume key press.
+    ///</summary>
     public void OnVolume(InputAction.CallbackContext context)
     {
         volumeWindow.SetActive(true);
@@ -478,7 +483,9 @@ public class SC_LauncherControler : MonoBehaviour
 
     public static Game gameToLaunch;
 
-    // Launch the game (at the current game index) in the main emplacement 
+    ///<summary>
+    ///Launches the selected game.
+    ///</summary>
     public static void LaunchGame(Game game)
     {
         instance.controls.Disable();
@@ -669,6 +676,9 @@ public class SC_LauncherControler : MonoBehaviour
     //[DllImport("user32.dll")]
     //private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
+    ///<summary>
+    /// Thread used to launch the game and make sure it starts in the foreground.
+    ///</summary>
     public static void test()
     {
         process = Process.Start(gameToLaunch.pathToExe);
@@ -687,7 +697,7 @@ public class SC_LauncherControler : MonoBehaviour
             ShowWindow(handle, 3);
             SetActiveWindow(handle);
         }
-        Thread.Sleep(5000);
+        Thread.Sleep(5000); //:)
         if (!process.HasExited) ShowWindow(launcherHandle, 6);
         instance.HideGameStartedMessage();
         //SetForegroundWindow(handle);
@@ -722,7 +732,9 @@ public class SC_LauncherControler : MonoBehaviour
 
     #region stuff
 
-    // Show the correct game depending on the currenGameIndex
+    ///<summary>
+    ///Fills name and logo for the three games displaye in the main screen.
+    ///</summary>
     public void updateGamesPreviews(int currentGameIndex)
     {
         int nbGames = games.Count;
@@ -761,19 +773,27 @@ public class SC_LauncherControler : MonoBehaviour
 
     }
 
-    // Load the gameToShow in the correct emplacement (tile)
+    ///<summary>
+    ///Sets game logo and name for the tile.
+    ///</summary>
     private void loadGameData(Item gameToShow, int tileIndex)
     {
         gamestiles[tileIndex].GetComponent<Image>().sprite = gameToShow.image;
         gamestiles[tileIndex].GetComponentInChildren<TextMeshProUGUI>().text = gameToShow.name;
     }
 
+    ///<summary>
+    ///Displays a panel informing the user that a game is starting.
+    ///</summary>
     private void ShowGameStartedMessage(string gameName)
     {
         gameStartedTransform.gameObject.SetActive(true);
         gameStartedText.text = "starting " + gameName;
     }
 
+    ///<summary>
+    ///Hides the panel informing the user that a game is starting.
+    ///</summary>
     private void HideGameStartedMessage()
     {
         gameStartedTransform.gameObject.SetActive(false);
@@ -787,7 +807,7 @@ public class SC_LauncherControler : MonoBehaviour
     private void OnEnable()
     {
         controls.Arcade.Enable();
-        controls.Volume.Disable();
+        controls.Volume.Enable();
     }
 
     private void OnDisable()

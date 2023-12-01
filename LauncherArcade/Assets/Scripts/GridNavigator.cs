@@ -7,6 +7,9 @@ using UnityEngine.Events;
 using TMPro;
 using System;
 
+///<summary>
+///Class used to navigate in one of the three grids of the launcher UI. Could probably be replaced by Unity's UI Navigation system :)
+///</summary>
 public class GridNavigator : MonoBehaviour
 {
 

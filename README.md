@@ -4,17 +4,21 @@
 ## Utilisation:
 	
 
-	Structure to be respected:
+	Structure à respecter
 		├── Launcher
 		|	├── Games
 		|	|	├── Jeu1
 		|	|	|	├── GameMeta
 		|	|	|	|	├── logo.png
+		|	|	|	|	├── demo.mp4
+		|	|	|	|	├── controls.txt
 		|	|	|	|	├── description.txt
 		|	|	|	├── ...
 		|	|	├── Jeu2
 		|	|	|	├── GameMeta
 		|	|	|	|	├── logo.png
+		|	|	|	|	├── demo.mp4
+		|	|	|	|	├── controls.txt
 		|	|	|	|	├── description.txt
 		|	|	|	├── ...
 		|	|	├── ...
@@ -28,6 +32,37 @@
 
 	For the logo of the game to be displayed, you have to put a image file named logo.png file in Games/<game name>/GameMeta/ (otherwise a default 7Fault logo will be shown).
 	The logo will be displayed as a square, so it is best that the image is squared.
+
+## Logo.png
+	Un logo du jeu qui sera affiché comme icône.
+
+## demo.mp4
+	Une vidéo au format 16x9 qui sera affichée dans l'écran d'information pour présenter le gameplay du jeu.
+	Ne mettre que du gameplay et privilégier une durée courte (max 20 secondes).
+
+## description.txt
+	Un fichier texte dont le contenu sera affiché dans l'écran d'information pour présenter le jeu.
+	Limiter la taille maximale du texte à une dizaine de lignes au maximum.
+
+## controls.txt
+	Un fichier texte qui contient toutes les informations caractéristiques au jeu, à savoir :
+	- Le nombre de joueurs
+	- Le genre du jeu
+	- Le / les collections dont le jeu fait partie (facultatif)
+	- Les contrôles
+
+	Le texte doit utiliser un format similaire à du XML à l'exception du fait que les balises de fin et de début sont identiques.
+
+	Exemple :
+
+	<nbJoueurs>1<nbJoueurs>
+	<Genre>Platformer<Genre>
+	<Collection>Jeux sous le sapin 2022<Collection>
+	
+
+### <nbJoueurs>
+
+
 
 
 ## TODO:

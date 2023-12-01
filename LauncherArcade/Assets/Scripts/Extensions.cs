@@ -7,6 +7,9 @@ using System.Collections.Generic;
 public static class Extensions
 {
 
+    ///<summary>
+    ///Returns the mathematical union of two lists of Item.
+    ///</summary>
     public static List<Item> Union(List<Item> list1, List<Item> list2)
     {
         List<Item> result = new List<Item>();
@@ -29,6 +32,9 @@ public static class Extensions
         return true;
     }
 
+    ///<summary>
+    ///Parses the text and returns the first substring between two instances of the defined tag.
+    ///</summary>
     public static string GetStrBetweenTag(this string value, string tag)
     {
         if (value.Contains(tag))
@@ -39,6 +45,9 @@ public static class Extensions
         else return "";
     }
 
+    ///<summary>
+    ///Parses the text and returns all the substring contained between two instances of the defined tag.
+    ///</summary>
     public static List<string> GetAllStrBetweenTag(this string value, string tag)
     {
         List<string> returnValue = new List<string>();
